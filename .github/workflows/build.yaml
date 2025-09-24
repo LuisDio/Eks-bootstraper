@@ -23,7 +23,7 @@ jobs:
       fail-fast: false
       max-parallel: 3
       matrix:
-        env: [ "dev", "sandbox", "prod" ]
+        env: [ "sandbox" ]
 
     concurrency:
       group: terraform-${{ matrix.env }}-${{ github.ref }}
@@ -38,21 +38,13 @@ jobs:
         with:
           terraform_version: 1.6.3
 
-    #   - name: Cache Terraform plugins
-    #     uses: actions/cache@v4
-    #     with:
-    #       path: environments/${{ matrix.env }}/.terraform
-    #       key: ${{ runner.os }}-terraform-${{ matrix.env }}-${{ hashFiles('environments/' + matrix.env + '/**/*.tf*') }}
-    #       restore-keys: |
-    #         ${{ runner.os }}-terraform-${{ matrix.env }}-
-
-      # Configure AWS credentials here (recommended: OIDC/assume-role). Example using secrets:
-    #   - name: Configure AWS credentials
-    #     uses: aws-actions/configure-aws-credentials@v2
-    #     with:
-    #       aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-    #       aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-    #       aws-region: ${{ secrets.AWS_REGION }}
+      - name: Cache Terraform plugins
+        uses: actions/cache@v4
+        with:
+          path: environments/${{ matrix.env }}/.terraform
+          key: ${{ runner.os }}-terraform-${{ matrix.env }}-${{ hashFiles(format('environments/{0}/**/*.tf*', matrix.env)) }}
+          restore-keys: |
+            ${{ runner.os }}-terraform-${{ matrix.env }}-
 
       - name: Terraform init
         run: terraform init -input=false
@@ -70,9 +62,3 @@ jobs:
       - name: Terraform plan
         run: terraform plan -var-file="terraform.tfvars" -out=plan.tfplan || true
         working-directory: environments/${{ matrix.env }}
-
-      # Optional gated apply (use environment protection rules or manual approval)
-      # - name: Terraform apply
-      #   if: github.ref == 'refs/heads/dev' # adjust condition per policy
-      #   run: terraform apply -input=false plan.tfplan
-      #   working-directory: environments/${{ matrix.env }}
