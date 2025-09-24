@@ -1,0 +1,15 @@
+// ...existing code...
+# Terraform local state and cache (recursive)
+**/terraform.tfstate
+**/terraform.tfstate.backup
+**/.terraform
+**/.terraform/*
+**/.terraform.lock.hcl
+
+# Optional local variable overrides and CLI config
+*.tfvars
+*.tfvars.*
+override.tf
+override.tf.json
+.terraformrc
+.terraformrc.tfrc

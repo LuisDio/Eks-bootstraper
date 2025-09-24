@@ -1,0 +1,78 @@
+name: validate and Deploy
+on:
+  push:
+    branches:
+      - dev
+      - main
+    paths:
+      - 'environments/**'
+      - '.github/workflows/**'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'environments/**'
+      - '.github/workflows/**'
+
+jobs:
+  terraform:
+    runs-on: ubuntu-latest
+
+    # scale by changing the matrix of environments
+    strategy:
+      fail-fast: false
+      max-parallel: 3
+      matrix:
+        env: [ "dev", "sandbox", "prod" ]
+
+    concurrency:
+      group: terraform-${{ matrix.env }}-${{ github.ref }}
+      cancel-in-progress: true
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.6.3
+
+    #   - name: Cache Terraform plugins
+    #     uses: actions/cache@v4
+    #     with:
+    #       path: environments/${{ matrix.env }}/.terraform
+    #       key: ${{ runner.os }}-terraform-${{ matrix.env }}-${{ hashFiles('environments/' + matrix.env + '/**/*.tf*') }}
+    #       restore-keys: |
+    #         ${{ runner.os }}-terraform-${{ matrix.env }}-
+
+      # Configure AWS credentials here (recommended: OIDC/assume-role). Example using secrets:
+    #   - name: Configure AWS credentials
+    #     uses: aws-actions/configure-aws-credentials@v2
+    #     with:
+    #       aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+    #       aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+    #       aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Terraform init
+        run: terraform init -input=false
+        working-directory: environments/${{ matrix.env }}
+
+      - name: Terraform fmt (check)
+        run: terraform fmt -check -recursive
+        working-directory: environments/${{ matrix.env }}
+
+      - name: Terraform validate
+        run: terraform validate
+        working-directory: environments/${{ matrix.env }}
+
+      # Optional: plan and (manual approval) apply steps per environment
+      - name: Terraform plan
+        run: terraform plan -var-file="terraform.tfvars" -out=plan.tfplan || true
+        working-directory: environments/${{ matrix.env }}
+
+      # Optional gated apply (use environment protection rules or manual approval)
+      # - name: Terraform apply
+      #   if: github.ref == 'refs/heads/dev' # adjust condition per policy
+      #   run: terraform apply -input=false plan.tfplan
+      #   working-directory: environments/${{ matrix.env }}
