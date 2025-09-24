@@ -60,5 +60,5 @@ jobs:
 
       # Optional: plan and (manual approval) apply steps per environment
       - name: Terraform plan
-        run: terraform plan -var-file="terraform.tfvars" -out=plan.tfplan || true
+        run: terraform plan -out=plan.tfplan || true
         working-directory: environments/${{ matrix.env }}
